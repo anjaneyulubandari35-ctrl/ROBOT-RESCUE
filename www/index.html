@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Robot Rescue 3D — Welcome &amp; Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Save the humans, flip gravity, and outrun searchlight turrets in this puzzle-platformer.">
+
+<!-- PWA: installable, works offline once added to the home screen -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1631">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Robot Rescue">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="welcomeScreen">
+  <canvas id="scene"></canvas>
+  <div id="vignette"></div>
+  <div id="scan"></div>
+
+  <div id="statusRow">
+    <div class="statusChip" id="chipPower">POWER <span class="led"></span></div>
+    <div class="statusChip" id="chipCore">CORE <span class="led"></span></div>
+    <div class="statusChip" id="chipLink">LINK <span class="led"></span></div>
+  </div>
+
+  <button id="themeBtn" type="button" aria-label="Change background theme">
+    🎨 <span id="themeLabel">CYBER LAB</span>
+  </button>
+
+  <div id="ui">
+    <div id="eyebrow">SYSTEM BOOT // AI COMPANION UNIT</div>
+    <h1 id="title" data-text="AI ROBOT RESCUE 3D"><span class="titleWhite">AI ROBOT</span> <span class="titleGold">RESCUE 3D</span></h1>
+    <div class="titleRule" id="rule"></div>
+    <div id="subtitle">SAVE THE HUMANS &nbsp;·&nbsp; OVERCOME GRAVITY &nbsp;·&nbsp; COMPLETE THE MISSION</div>
+
+    <div id="startButtons">
+      <button id="btnPlay" class="startBtn startBtnPrimary" type="button">PLAY</button>
+      <button id="btnLevelSelect" class="startBtn" type="button">LEVEL SELECT</button>
+      <button id="btnSettings" class="startBtn" type="button">SETTINGS</button>
+    </div>
+
+    <div id="hint"><span class="dot"></span> OR TAP ANYWHERE TO LAUNCH</div>
+  </div>
+
+  <button id="installBtn" type="button" aria-label="Install app">📲 INSTALL APP</button>
+
+  <div id="settingsPanel">
+    <div id="settingsTitle">SETTINGS</div>
+    <button id="btnMute" class="settingsRow" type="button">
+      <span>SOUND</span> <span id="muteState">ON</span>
+    </button>
+    <button id="btnCloseSettings" class="settingsRow settingsClose" type="button">CLOSE</button>
+  </div>
+</div>
+
+<div id="loadingScreen">
+  <div id="loaderRobotWrap">
+    <div id="loaderRobot">
+      <div class="lrHead"><div class="lrVisor"></div></div>
+      <div class="lrBody"><div class="lrCore"></div></div>
+      <div class="lrArm lrArmL"></div>
+      <div class="lrArm lrArmR"></div>
+      <div class="lrLeg lrLegL"></div>
+      <div class="lrLeg lrLegR"></div>
+    </div>
+    <div id="loaderShadow"></div>
+  </div>
+  <div id="loaderLabel">BOOTING MISSION SYSTEMS<span class="loaderDots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div id="loaderBar"><div id="loaderFill"></div></div>
+</div>
+
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+  <div id="gameHint">
+    <span class="kbd-hint">🏃 Move: <b>ARROWS / WASD</b></span>
+    <span class="kbd-hint">🚀 Jump: <b>SPACE</b></span>
+    <span class="kbd-hint">⚡ Flip Gravity: <b>G</b></span>
+    <span class="kbd-hint">🔘 Interact: <b>E</b></span>
+    <button class="hint-btn" onclick="Game.restartLevel()">🔄 RESTART (R)</button>
+    <button class="hint-btn" onclick="Game.exitToDashboard()">🚪 DASHBOARD</button>
+    <button class="hint-btn" id="bgThemeBtn" onclick="GameThemes.cycle()">🎨 BG: <span id="bgThemeLabel">AUTO</span></button>
+  </div>
+
+  <!-- Touch controls: shown only on touch devices, wired up in mobile-controls.js -->
+  <div id="touchControls">
+    <div id="touchMoveGroup" class="touchGroup">
+      <button class="touchBtn touchBtnWide" id="btnLeft" data-key="ArrowLeft" aria-label="Move left">◀</button>
+      <button class="touchBtn touchBtnWide" id="btnRight" data-key="ArrowRight" aria-label="Move right">▶</button>
+    </div>
+    <div id="touchActionGroup" class="touchGroup">
+      <button class="touchBtn touchBtnSmall" id="btnInteract" data-key="KeyE" aria-label="Interact">E</button>
+      <button class="touchBtn touchBtnSmall" id="btnGravity" data-key="KeyG" aria-label="Flip gravity">⇅</button>
+      <button class="touchBtn touchBtnJump" id="btnJump" data-key="Space" aria-label="Jump">⤒</button>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js loaded locally so the app works fully offline (no CDN needed) -->
+<script src="three.min.js"></script>
+<!-- Capacitor native bridge - required for Android hardware back button, status bar, etc. -->
+<script src="https://cdn.jsdelivr.net/npm/@capacitor/core@6/dist/capacitor.js"></script>
+<!-- perf.js must load first: the 3D welcome scene and the game canvas
+     both size themselves from the quality tier it works out. -->
+<script src="perf.js"></script>
+<script src="script.js"></script>
+<script src="audio.js"></script>
+<script src="entities.js"></script>
+<script src="levels.js"></script>
+<script src="renderer.js"></script>
+<script src="game-themes.js"></script>
+<script src="game.js"></script>
+<script src="mobile-controls.js"></script>
+<script>
+  // ---------------------------------------------------------------
+  // PWA: register the service worker (offline play once installed)
+  // and wire up the "Install App" button via the beforeinstallprompt
+  // event (Chrome/Edge/Android). iOS Safari has no install prompt API,
+  // so we just point those users at "Add to Home Screen" instead.
+  // ---------------------------------------------------------------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+
+  (function () {
+    const installBtn = document.getElementById('installBtn');
+    if (!installBtn) return;
+    let deferredPrompt = null;
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+    if (isStandalone) return; // already installed — never show the button
+
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.add('show');
+    });
+
+    installBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+    installBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        installBtn.classList.remove('show');
+      } else if (isIOS) {
+        alert('To install: tap the Share button, then "Add to Home Screen".');
+      }
+    });
+
+    // iOS never fires beforeinstallprompt — show the button anyway so
+    // those players get the "Add to Home Screen" instructions above.
+    if (isIOS) installBtn.classList.add('show');
+
+    window.addEventListener('appinstalled', () => {
+      installBtn.classList.remove('show');
+    });
+  })();
+
+  // ---------------------------------------------------------------
+  // ANDROID HARDWARE BACK BUTTON — handled via Capacitor App plugin
+  // The Android back button should behave naturally:
+  //   - During play: pause the game (same as pressing P/Escape)
+  //   - On dashboard/welcome: show a "tap again to exit" toast, then exit
+  //   - On game-over/win: go back to dashboard
+  // ---------------------------------------------------------------
+  (function () {
+    let backPressedOnce = false;
+    let backToast = null;
+
+    function setupAndroidBack() {
+      // Capacitor App plugin is available after the bridge loads
+      if (typeof Capacitor === 'undefined' || !Capacitor.isNativePlatform()) return;
+
+      // Dynamically import the App plugin
+      Promise.resolve().then(function () {
+        // Listen for the Android back button event
+        document.addEventListener('backbutton', handleBack, false);
+
+        // Also hook into Capacitor's App plugin if available
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+          window.Capacitor.Plugins.App.addListener('backButton', function () {
+            handleBack();
+          });
+        }
+      });
+    }
+
+    function showExitToast() {
+      if (backToast) return;
+      backToast = document.createElement('div');
+      backToast.textContent = 'Press back again to exit';
+      backToast.style.cssText = [
+        'position:fixed', 'bottom:80px', 'left:50%', 'transform:translateX(-50%)',
+        'background:rgba(10,14,26,0.92)', 'color:#4CE0D2', 'padding:10px 22px',
+        'border-radius:24px', 'border:1px solid rgba(76,224,210,0.4)',
+        'font-family:Chakra Petch,sans-serif', 'font-size:13px', 'letter-spacing:1.5px',
+        'z-index:9999', 'pointer-events:none'
+      ].join(';');
+      document.body.appendChild(backToast);
+      setTimeout(function () {
+        if (backToast) { backToast.remove(); backToast = null; }
+        backPressedOnce = false;
+      }, 2200);
+    }
+
+    function exitApp() {
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+        window.Capacitor.Plugins.App.exitApp();
+      }
+    }
+
+    function handleBack() {
+      if (typeof Game === 'undefined') return;
+
+      const GS_PLAYING   = 'PLAYING';
+      const GS_DASHBOARD = 'DASHBOARD';
+      const GS_WELCOME   = 'WELCOME';
+      const GS_PAUSED    = 'PAUSED';
+      const GS_GAME_OVER = 'GAME_OVER';
+      const GS_WIN       = 'WIN';
+      const GS_LEVEL_COMPLETE = 'LEVEL_COMPLETE';
+
+      const state = Game.state;
+
+      if (state === GS_PLAYING) {
+        // Pause the game
+        Game.state = GS_PAUSED;
+        if (typeof AudioManager !== 'undefined') AudioManager.menuBeep();
+        return;
+      }
+
+      if (state === GS_PAUSED) {
+        // Resume
+        Game.state = GS_PLAYING;
+        if (typeof AudioManager !== 'undefined') AudioManager.menuBeep();
+        return;
+      }
+
+      if (state === GS_WELCOME || state === GS_LEVEL_COMPLETE) {
+        Game.exitToDashboard();
+        return;
+      }
+
+      if (state === GS_GAME_OVER || state === GS_WIN) {
+        Game.exitToDashboard();
+        return;
+      }
+
+      if (state === GS_DASHBOARD) {
+        // Double-back to exit
+        if (backPressedOnce) {
+          exitApp();
+        } else {
+          backPressedOnce = true;
+          showExitToast();
+        }
+        return;
+      }
+
+      // Fallback: exit
+      if (backPressedOnce) {
+        exitApp();
+      } else {
+        backPressedOnce = true;
+        showExitToast();
+      }
+    }
+
+    // Wait until DOM + scripts are loaded before attaching
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupAndroidBack);
+    } else {
+      setupAndroidBack();
+    }
+  })();
+</script>
+
+</body>
+</html>

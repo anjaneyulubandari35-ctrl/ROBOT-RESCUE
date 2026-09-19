@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Robot Rescue</string>
+    <string name="title_activity_main">Robot Rescue</string>
+    <string name="package_name">com.robotrescue.game</string>
+    <string name="custom_url_scheme">com.robotrescue.game</string>
+</resources>
